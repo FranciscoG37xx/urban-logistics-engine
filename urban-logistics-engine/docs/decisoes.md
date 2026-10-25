@@ -99,3 +99,40 @@ Ordena-se por valor/custo decrescente e aceita-se o que ainda cabe.
 **Limitações.** Não é ótimo. Capacidade 10 kg: A (6 kg, valor 7), B e C (5 kg, valor 5.5).
 O greedy escolhe A (7) e depois nenhuma outra cabe, mas B+C valem 11.
 Serve quando o tempo de cálculo conta mais do que o ótimo exato.
+
+## 6b. Mochila (knapsack) como alternativa ótima ao greedy
+
+**Problema.** O greedy é uma heurística; com peso e volume pode falhar (ver contraexemplo).
+**Escolha.** Mochila 0/1 com 2 restrições por programação dinâmica: melhor[p][v] = maior valor
+com p unidades de peso e v de volume. Para cada encomenda, percorre-se a tabela do fim para o
+início (cada uma entra no máximo uma vez).
+**Discretização.** O DP precisa de inteiros: a capacidade livre de cada dimensão divide-se em
+R = 100 unidades e os tamanhos arredondam-se por excesso. Assim a solução nunca excede a
+capacidade real; o preço é perder algum valor quando os tamanhos não são múltiplos da unidade.
+**Complexidade.** Tempo O(n·R²); espaço O(R²) para os valores e O(n·R²) para reconstruir a
+solução. Pseudo-polinomial: cresce com a resolução, não só com n.
+**Greedy vs knapsack.** O(n log n) e simples, mas pode falhar; knapsack ótimo (dentro da
+resolução) mas muito mais caro. Usa-se o greedy quando há muitas encomendas; o knapsack
+quando a qualidade da carga compensa o custo.
+
+## 7. Seleção de intervalos
+
+**Problema.** Escolher o maior número de janelas de entrega sem sobreposição para um veículo.
+**Alternativas.** Força bruta O(2^n); DP O(n²); greedy por fim mais cedo O(n log n).
+**Escolha.** Ordenar por fim e aceitar a primeira que começa quando (ou depois de) a última
+aceite termina. Intervalos semiabertos [início, fim).
+**Porque funciona.** Argumento de troca: numa solução ótima, trocar a primeira janela pela que
+termina mais cedo não reduz o número de janelas, porque deixa mais tempo livre. Repete-se
+para as restantes.
+**Complexidade.** Θ(n log n) tempo (ordenação), O(n) espaço.
+**Limitações.** Maximiza o número de entregas, não o valor delas.
+
+## 8. Persistência
+
+**Escolha.** Ficheiro de texto com um registo por linha (CLOCK, VEHICLE, ORDER, WINDOW)
+e campos separados por ';'. Guarda-se uma fotografia do estado, e não o registo de
+operações, porque o registo inclui atribuições desfeitas. Ao carregar, o estado é
+reconstruído pela API do gestor, que reaproveita todas as validações.
+**Segurança.** Escrita num ficheiro temporário e só depois substitui o original; o
+carregamento só substitui o estado atual se o ficheiro for lido por inteiro.
+**Limitações.** O histórico não é guardado e as encomendas canceladas não são guardadas.

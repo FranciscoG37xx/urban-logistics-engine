@@ -4,6 +4,10 @@
  */
 package urbanlogistics.service;
 
+import urbanlogistics.algorithms.IntervalScheduling;
+import urbanlogistics.algorithms.KnapsackPacking;
+import urbanlogistics.algorithms.PackingStrategy;
+import urbanlogistics.model.DeliveryWindow;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,6 +40,7 @@ public class GestorEncomendas {
     private final Set<String> idsUsados = new HashSet<>();
     private final Map<String, Veiculo> veiculos = new LinkedHashMap<>();
     private final HistoricoOperacoes historico = new HistoricoOperacoes();
+        private final List<DeliveryWindow> janelas = new ArrayList<>();
 
     public GestorEncomendas() {
         // Maior pontuação primeiro; em empate, menor identificador primeiro.
@@ -103,21 +108,56 @@ public class GestorEncomendas {
         Operacao operacao = new Operacao(TipoOperacao.CANCELAMENTO, encomenda, null, instante);
         fila.remover(encomenda);
         pendentes.remove(idEncomenda);
+        janelas.removeIf(j -> j.getIdEncomenda().equals(idEncomenda));
         historico.registar(operacao);
     }
     
-        /**
-     * Carrega o veículo com as encomendas escolhidas pelo greedy.
-     * A seleção é feita antes de alterar o estado, por isso uma falha
-     * a calcular não deixa nada a meio. O(n log n + k·n), k = escolhidas.
-     */
-    public List<Encomenda> carregarVeiculo(String idVeiculo, long instante) {
+          /** Mostra o que a estratégia escolheria para o veículo, sem alterar o estado. */
+    public List<Encomenda> simularSelecao(String idVeiculo, long instante, PackingStrategy estrategia) {
+        Objects.requireNonNull(estrategia, "A estratégia é obrigatória.");
         Veiculo veiculo = obterVeiculo(idVeiculo);
-        List<Encomenda> escolhidas = GreedyPacking.selecionar(fila.elementos(), veiculo, instante);
+        List<Encomenda> candidatas = fila.elementos();
+        if (estrategia == PackingStrategy.KNAPSACK) {
+            return KnapsackPacking.selecionar(candidatas, veiculo, instante);
+        }
+        return GreedyPacking.selecionar(candidatas, veiculo, instante);
+    }
+
+    /**
+     * Carrega o veículo com as encomendas escolhidas pela estratégia. A seleção é feita
+     * antes de alterar o estado e cabe sempre no veículo. Cada encomenda fica como uma
+     * atribuição separada (o Undo desfaz uma de cada vez).
+     */
+    public List<Encomenda> carregarVeiculo(String idVeiculo, long instante, PackingStrategy estrategia) {
+        List<Encomenda> escolhidas = simularSelecao(idVeiculo, instante, estrategia);
         for (Encomenda e : escolhidas) {
             atribuir(e.getId(), idVeiculo, instante);
         }
         return escolhidas;
+    }
+
+    // ---- Janelas de entrega ----
+
+    public void adicionarJanela(DeliveryWindow janela) {
+        Objects.requireNonNull(janela, "A janela é obrigatória.");
+        if (!idsUsados.contains(janela.getIdEncomenda())) {
+            throw new IllegalArgumentException("Encomenda desconhecida: " + janela.getIdEncomenda());
+        }
+        for (DeliveryWindow existente : janelas) {
+            if (existente.getId().equals(janela.getId())) {
+                throw new IllegalArgumentException("Já existe a janela " + janela.getId() + ".");
+            }
+        }
+        janelas.add(janela);
+    }
+
+    public List<DeliveryWindow> getJanelas() {
+        return Collections.unmodifiableList(janelas);
+    }
+
+    /** Maior conjunto de janelas sem sobreposição. O(n log n). */
+    public List<DeliveryWindow> otimizarJanelas() {
+        return IntervalScheduling.selecionar(janelas);
     }
 
     // ---- Undo / Redo de atribuições ----
