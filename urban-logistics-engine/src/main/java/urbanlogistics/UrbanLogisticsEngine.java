@@ -8,9 +8,12 @@ package urbanlogistics;
  *
  * @author franc
  */
+import java.nio.file.Paths;
+import urbanlogistics.ui.MainMenu;
+
 public class UrbanLogisticsEngine {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        new MainMenu(Paths.get("data", "state.txt")).run();
     }
 }
